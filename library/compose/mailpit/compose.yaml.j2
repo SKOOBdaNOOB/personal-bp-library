@@ -1,0 +1,39 @@
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: {{ service_name }}
+    restart: {{ restart_policy }}
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      MP_MAX_MESSAGES: {{ max_messages }}
+      MP_DATA_FILE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: {{ smtp_auth_accept_any | int }}
+      MP_SMTP_AUTH_ALLOW_INSECURE: {{ smtp_auth_allow_insecure | int }}
+    volumes:
+      - ./data:/data
+    ports:
+      - "{{ port_smtp }}:1025"
+{% if not traefik_enabled %}
+      - "{{ port_http }}:8025"
+{% endif %}
+    networks:
+      - {{ bridge_network }}
+{% if traefik_enabled %}
+      - {{ traefik_network }}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.{{ service_name }}.rule=Host(`{{ traefik_host }}.{{ traefik_domain }}`)"
+      - "traefik.http.routers.{{ service_name }}.entrypoints=websecure"
+      - "traefik.http.routers.{{ service_name }}.tls.certresolver={{ cert_resolver }}"
+      - "traefik.http.services.{{ service_name }}.loadbalancer.server.port=8025"
+      - "traefik.docker.network={{ traefik_network }}"
+{% endif %}
+
+networks:
+  {{ bridge_network }}:
+    driver: bridge
+{% if traefik_enabled %}
+  {{ traefik_network }}:
+    external: true
+{% endif %}

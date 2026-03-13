@@ -1,0 +1,14 @@
+services:
+  cf-tunnel:
+    container_name: {{ service_name }}
+    image: cloudflare/cloudflared:latest
+    restart: {{ restart_policy }}
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - {{ proxy_network }}
+
+networks:
+  {{ proxy_network }}:
+    external: true

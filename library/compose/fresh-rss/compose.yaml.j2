@@ -1,0 +1,32 @@
+services:
+  freshrss:
+    image: freshrss/freshrss:latest
+    container_name: {{ service_name }}
+    restart: {{ restart_policy }}
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CRON_MIN={{ cron_min }}
+      - TZ={{ timezone }}
+    volumes:
+      - ./data:/var/www/FreshRSS/data
+{% if traefik_enabled %}
+    networks:
+      - {{ traefik_network }}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.{{ service_name }}.rule=Host(`{{ traefik_host }}.{{ traefik_domain }}`)"
+      - "traefik.http.routers.{{ service_name }}.entrypoints=websecure"
+      - "traefik.http.routers.{{ service_name }}.tls.certresolver={{ cert_resolver }}"
+      - "traefik.http.services.{{ service_name }}.loadbalancer.server.port=80"
+      - "traefik.docker.network={{ traefik_network }}"
+{% else %}
+    ports:
+      - "{{ port_http }}:80"
+{% endif %}
+
+{% if traefik_enabled %}
+networks:
+  {{ traefik_network }}:
+    external: true
+{% endif %}

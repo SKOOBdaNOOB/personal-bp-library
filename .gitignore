@@ -1,0 +1,13 @@
+## Claude Code files
+.claude/
+
+## Secrets and environment files
+.env
+*/.env
+
+## OS artifacts
+.DS_Store
+**/.DS_Store
+
+## Runtime data (live deployments)
+*/data/

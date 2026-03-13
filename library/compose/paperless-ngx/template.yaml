@@ -1,0 +1,100 @@
+version: 1.2
+service:
+  name: paperless-ngx
+  description: "Self-hosted document management system with OCR, tagging, and full-text search"
+  author: "Stephen Delisser"
+  date: 2026-03-13
+  tags: [documents, ocr, selfhosted, archive]
+  icon: selfhosted
+  links:
+    documentation: "https://docs.paperless-ngx.com/"
+    repository: "https://github.com/paperless-ngx/paperless-ngx"
+
+specification:
+  - General:
+      - restart_policy:
+          type: enum
+          description: "Docker restart policy"
+          default: unless-stopped
+          options: [always, unless-stopped, on-failure, "no"]
+          required: false
+
+  - Database:
+      - pg_db:
+          type: string
+          description: "PostgreSQL database name"
+          default: paperless
+          required: false
+      - pg_user:
+          type: string
+          description: "PostgreSQL username"
+          default: paperless
+          required: false
+      - pg_pass:
+          type: string
+          description: "PostgreSQL password"
+          default: ""
+          required: true
+          sensitive: true
+
+  - Paperless:
+      - secret_key:
+          type: string
+          description: "Django secret key for cryptographic signing (generate a random 50-char string)"
+          default: ""
+          required: true
+          sensitive: true
+      - admin_user:
+          type: string
+          description: "Initial admin username"
+          default: admin
+          required: false
+      - admin_mail:
+          type: string
+          description: "Initial admin email address"
+          default: admin@example.com
+          required: false
+      - ocr_language:
+          type: string
+          description: "Primary OCR language (ISO 639-2 code, e.g. eng, fra, deu)"
+          default: eng
+          required: false
+      - time_zone:
+          type: string
+          description: "Timezone for the application (tz database format)"
+          default: America/New_York
+          required: false
+
+  - Traefik:
+      - traefik_enabled:
+          type: bool
+          description: "Enable Traefik reverse proxy integration"
+          default: true
+          required: false
+      - traefik_host:
+          type: string
+          description: "Subdomain for Traefik routing (e.g. paperless)"
+          default: paperless
+          required: false
+      - traefik_domain:
+          type: string
+          description: "Base domain for Traefik routing (e.g. home.example.com)"
+          default: home.example.com
+          required: false
+      - traefik_network:
+          type: string
+          description: "External Traefik network name"
+          default: proxy
+          required: false
+      - cert_resolver:
+          type: string
+          description: "Traefik certificate resolver name"
+          default: cloudflare
+          required: false
+
+  - Ports:
+      - port_http:
+          type: int
+          description: "HTTP port (used when Traefik is disabled)"
+          default: 8000
+          required: false

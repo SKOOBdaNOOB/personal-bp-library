@@ -1,0 +1,105 @@
+services:
+  {{ service_name }}-postgresql:
+    image: docker.io/library/postgres:12-alpine
+    container_name: {{ service_name }}-postgresql
+    restart: {{ restart_policy }}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - {{ service_name }}-database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASS}
+      POSTGRES_USER: {{ pg_user }}
+      POSTGRES_DB: {{ pg_db }}
+
+  {{ service_name }}-redis:
+    image: docker.io/library/redis:alpine
+    container_name: {{ service_name }}-redis
+    command: --save 60 1 --loglevel warning
+    restart: {{ restart_policy }}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - {{ service_name }}-redis:/data
+
+  {{ service_name }}-server:
+    image: {{ authentik_image }}:{{ authentik_tag }}
+    container_name: {{ service_name }}-server
+    restart: {{ restart_policy }}
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: {{ service_name }}-redis
+      AUTHENTIK_POSTGRESQL__HOST: {{ service_name }}-postgresql
+      AUTHENTIK_POSTGRESQL__USER: {{ pg_user }}
+      AUTHENTIK_POSTGRESQL__NAME: {{ pg_db }}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+    volumes:
+      - ./media:/media
+      - ./custom-templates:/templates
+    depends_on:
+      {{ service_name }}-postgresql:
+        condition: service_healthy
+      {{ service_name }}-redis:
+        condition: service_healthy
+{% if traefik_enabled %}
+    networks:
+      - {{ traefik_network }}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.{{ service_name }}.rule=Host(`{{ traefik_host }}.{{ traefik_domain }}`)"
+      - "traefik.http.routers.{{ service_name }}.entrypoints=websecure"
+      - "traefik.http.routers.{{ service_name }}.tls.certresolver={{ cert_resolver }}"
+      - "traefik.http.services.{{ service_name }}.loadbalancer.server.port=9000"
+      - "traefik.docker.network={{ traefik_network }}"
+{% else %}
+    ports:
+      - "{{ port_http }}:9000"
+      - "{{ port_https }}:9443"
+{% endif %}
+
+  {{ service_name }}-worker:
+    image: {{ authentik_image }}:{{ authentik_tag }}
+    container_name: {{ service_name }}-worker
+    restart: {{ restart_policy }}
+    command: worker
+    user: root
+    environment:
+      AUTHENTIK_REDIS__HOST: {{ service_name }}-redis
+      AUTHENTIK_POSTGRESQL__HOST: {{ service_name }}-postgresql
+      AUTHENTIK_POSTGRESQL__USER: {{ pg_user }}
+      AUTHENTIK_POSTGRESQL__NAME: {{ pg_db }}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./media:/media
+      - ./certs:/certs
+      - ./custom-templates:/templates
+    depends_on:
+      {{ service_name }}-postgresql:
+        condition: service_healthy
+      {{ service_name }}-redis:
+        condition: service_healthy
+{% if traefik_enabled %}
+    networks:
+      - {{ traefik_network }}
+{% endif %}
+
+volumes:
+  {{ service_name }}-database:
+    driver: local
+  {{ service_name }}-redis:
+    driver: local
+
+{% if traefik_enabled %}
+networks:
+  {{ traefik_network }}:
+    external: true
+{% endif %}

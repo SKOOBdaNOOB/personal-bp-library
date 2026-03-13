@@ -1,0 +1,67 @@
+services:
+  traefik:
+    image: docker.io/library/traefik:v3.6.1
+    hostname: traefik
+    ports:
+      - "{{ port_http }}:80"
+      - "{{ port_https }}:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/var/traefik/certs:rw
+    environment:
+      - TZ={{ timezone }}
+      - CF_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_api_token
+      - TRAEFIK_LOG_LEVEL={{ log_level }}
+    configs:
+      - source: traefik_config
+        target: /etc/traefik/traefik.yaml
+      - source: traefik_middlewares
+        target: /etc/traefik/files/middlewares.yaml
+      - source: traefik_routers
+        target: /etc/traefik/files/routers.yaml
+      - source: traefik_services
+        target: /etc/traefik/files/services.yaml
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - {{ network_name }}
+    secrets:
+      - cloudflare_api_token
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == {{ swarm_host }}
+
+volumes:
+  traefik_certs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: {{ cert_volume_path }}
+
+configs:
+  traefik_config:
+    file: ./config/traefik.yaml
+  traefik_middlewares:
+    file: ./files/middlewares.yaml
+  traefik_routers:
+    file: ./files/routers.yaml
+  traefik_services:
+    file: ./files/services.yaml
+
+secrets:
+  cloudflare_api_token:
+    file: ./.env.secret
+
+networks:
+  {{ network_name }}:
+    driver: overlay
+    attachable: true
+    name: {{ network_name }}

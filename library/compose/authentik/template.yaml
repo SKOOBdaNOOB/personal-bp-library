@@ -1,0 +1,94 @@
+version: 1.2
+service:
+  name: authentik
+  description: "Open-source Identity Provider supporting SSO, MFA, and OAuth2/OIDC"
+  author: "Stephen Delisser"
+  date: 2026-03-13
+  tags: [auth, sso, identity, selfhosted]
+  icon: selfhosted
+  links:
+    documentation: "https://docs.goauthentik.io"
+    repository: "https://github.com/goauthentik/authentik"
+
+specification:
+  - General:
+      - service_name:
+          type: string
+          description: "Container name prefix for all authentik services"
+          default: authentik
+          required: false
+      - restart_policy:
+          type: enum
+          description: "Docker restart policy"
+          default: unless-stopped
+          options: [always, unless-stopped, on-failure, "no"]
+          required: false
+
+  - Authentik:
+      - authentik_image:
+          type: string
+          description: "Authentik Docker image"
+          default: ghcr.io/goauthentik/server
+          required: false
+      - authentik_tag:
+          type: string
+          description: "Authentik image tag/version"
+          default: 2024.2.2
+          required: false
+
+  - Database:
+      - pg_user:
+          type: string
+          description: "PostgreSQL username"
+          default: authentik
+          required: false
+      - pg_db:
+          type: string
+          description: "PostgreSQL database name"
+          default: authentik
+          required: false
+      - pg_pass:
+          type: string
+          description: "PostgreSQL password"
+          default: ""
+          required: true
+          sensitive: true
+
+  - Traefik:
+      - traefik_enabled:
+          type: bool
+          description: "Enable Traefik reverse proxy integration"
+          default: true
+          required: false
+      - traefik_host:
+          type: string
+          description: "Subdomain for Traefik routing (e.g. auth)"
+          default: auth
+          required: false
+      - traefik_domain:
+          type: string
+          description: "Base domain for Traefik routing (e.g. home.example.com)"
+          default: home.example.com
+          required: false
+      - traefik_network:
+          type: string
+          description: "External Traefik network name"
+          default: proxy
+          required: false
+      - cert_resolver:
+          type: string
+          description: "Traefik certificate resolver name"
+          default: cloudflare
+          required: false
+
+  - Ports:
+      - port_http:
+          type: int
+          description: "HTTP port (used when Traefik is disabled)"
+          default: 9000
+          required: false
+      - port_https:
+          type: int
+          description: "HTTPS port (used when Traefik is disabled)"
+          default: 9443
+          required: false

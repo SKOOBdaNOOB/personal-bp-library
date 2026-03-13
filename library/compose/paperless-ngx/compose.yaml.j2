@@ -1,0 +1,80 @@
+services:
+  broker:
+    image: docker.io/library/redis:8
+    container_name: paperless-broker
+    restart: {{ restart_policy }}
+    volumes:
+      - paperless-redisdata:/data
+
+  db:
+    image: docker.io/library/postgres:16
+    container_name: paperless-db
+    restart: {{ restart_policy }}
+    volumes:
+      - paperless-pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: {{ pg_db }}
+      POSTGRES_USER: {{ pg_user }}
+      POSTGRES_PASSWORD: ${PG_PASS}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+
+  webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-webserver
+    restart: {{ restart_policy }}
+    depends_on:
+      db:
+        condition: service_healthy
+      broker:
+        condition: service_started
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - ./export:/usr/src/paperless/export
+      - ./consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBNAME: {{ pg_db }}
+      PAPERLESS_DBUSER: {{ pg_user }}
+      PAPERLESS_DBPASS: ${PG_PASS}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_ADMIN_USER: {{ admin_user }}
+      PAPERLESS_ADMIN_MAIL: {{ admin_mail }}
+      PAPERLESS_OCR_LANGUAGE: {{ ocr_language }}
+      PAPERLESS_TIME_ZONE: {{ time_zone }}
+{% if traefik_enabled %}
+    networks:
+      - {{ traefik_network }}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.{{ service_name }}.rule=Host(`{{ traefik_host }}.{{ traefik_domain }}`)"
+      - "traefik.http.routers.{{ service_name }}.entrypoints=websecure"
+      - "traefik.http.routers.{{ service_name }}.tls.certresolver={{ cert_resolver }}"
+      - "traefik.http.services.{{ service_name }}.loadbalancer.server.port=8000"
+      - "traefik.docker.network={{ traefik_network }}"
+{% else %}
+    ports:
+      - "{{ port_http }}:8000"
+{% endif %}
+
+volumes:
+  paperless-data:
+    driver: local
+  paperless-media:
+    driver: local
+  paperless-pgdata:
+    driver: local
+  paperless-redisdata:
+    driver: local
+
+{% if traefik_enabled %}
+networks:
+  {{ traefik_network }}:
+    external: true
+{% endif %}

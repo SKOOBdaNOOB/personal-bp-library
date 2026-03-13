@@ -1,0 +1,40 @@
+version: 1.2
+service:
+  name: cloudflared
+  description: "Cloudflare Tunnel client for securely exposing local services without opening firewall ports"
+  author: "Stephen Delisser"
+  date: 2026-03-13
+  tags: [cloudflare, tunnel, network, proxy]
+  icon: selfhosted
+  links:
+    documentation: "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/"
+    repository: "https://github.com/cloudflare/cloudflared"
+
+specification:
+  - General:
+      - service_name:
+          type: string
+          description: "Container name"
+          default: cloudflared
+          required: false
+      - restart_policy:
+          type: enum
+          description: "Docker restart policy"
+          default: unless-stopped
+          options: [always, unless-stopped, on-failure, "no"]
+          required: false
+
+  - Tunnel:
+      - tunnel_token:
+          type: string
+          description: "Cloudflare Tunnel token (from Cloudflare Zero Trust dashboard)"
+          default: ""
+          required: true
+          sensitive: true
+
+  - Network:
+      - proxy_network:
+          type: string
+          description: "External proxy network to attach the tunnel to"
+          default: proxy
+          required: false

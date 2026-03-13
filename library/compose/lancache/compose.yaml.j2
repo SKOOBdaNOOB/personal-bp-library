@@ -1,0 +1,35 @@
+x-restart-policy: &restart-policy "{{ restart_policy }}"
+
+services:
+  dns:
+    image: lancachenet/lancache-dns:latest
+    container_name: lancache-dns
+    restart: *restart-policy
+    environment:
+      USE_GENERIC_CACHE: "{{ use_generic_cache | lower }}"
+      LANCACHE_IP: {{ lancache_ip }}
+      DNS_BIND_IP: {{ dns_bind_ip }}
+      UPSTREAM_DNS: {{ upstream_dns }}
+      TZ: {{ timezone }}
+    ports:
+      - "{{ dns_bind_ip }}:53:53/udp"
+      - "{{ dns_bind_ip }}:53:53/tcp"
+
+  monolithic:
+    image: lancachenet/monolithic:latest
+    container_name: lancache-service
+    restart: *restart-policy
+    environment:
+      USE_GENERIC_CACHE: "{{ use_generic_cache | lower }}"
+      LANCACHE_IP: {{ lancache_ip }}
+      CACHE_DISK_SIZE: {{ cache_disk_size }}
+      CACHE_INDEX_SIZE: {{ cache_index_size }}
+      CACHE_MAX_AGE: {{ cache_max_age }}
+      MIN_FREE_DISK: {{ min_free_disk }}
+      TZ: {{ timezone }}
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    volumes:
+      - {{ cache_root }}/cache:/data/cache
+      - {{ cache_root }}/logs:/data/logs
