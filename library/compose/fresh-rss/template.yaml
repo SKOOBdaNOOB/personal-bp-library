@@ -13,7 +13,7 @@ metadata:
   icon:
     provider: selfh
     id: fresh-rss
-  draft: true
+  draft: false
 
 spec:
   general:

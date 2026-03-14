@@ -13,7 +13,7 @@ metadata:
   icon:
     provider: selfh
     id: homebox
-  draft: true
+  draft: false
 
 spec:
   general:
