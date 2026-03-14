@@ -1,16 +1,24 @@
 services:
-  traefik:
+  {{ service_name }}:
     image: docker.io/library/traefik:v3.6.1
-    hostname: traefik
+    hostname: {{ service_name }}
     ports:
       - "{{ port_http }}:80"
       - "{{ port_https }}:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_certs:/var/traefik/certs:rw
+      {% if volume_mode == 'mount' %}
+      - {{ volume_mount_path }}:/var/traefik/certs/:rw
+      {% else %}
+      - {{ service_name }}_certs:/var/traefik/certs/:rw
+      {% endif %}
     environment:
       - TZ={{ timezone }}
+      {% if swarm_enabled %}
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_api_token
+      {% else %}
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+      {% endif %}
       - TRAEFIK_LOG_LEVEL={{ log_level }}
     configs:
       - source: traefik_config
@@ -28,23 +36,29 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - {{ network_name }}
+      - {{ traefik_network }}
+    {% if swarm_enabled %}
     secrets:
       - cloudflare_api_token
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: {{ swarm_placement_mode }}
+      {% if swarm_placement_mode == 'replicated' %}
+      replicas: {{ swarm_replicas }}
+      {% endif %}
+      {% if swarm_placement_host %}
       placement:
         constraints:
-          - node.hostname == {{ swarm_host }}
+          - node.hostname == {{ swarm_placement_host }}
+      {% endif %}
+    {% else %}
+    restart: {{ restart_policy }}
+    {% endif %}
 
-volumes:
-  traefik_certs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: {{ cert_volume_path }}
+{% if swarm_enabled %}
+secrets:
+  cloudflare_api_token:
+    file: ./.env.secret
+{% endif %}
 
 configs:
   traefik_config:
@@ -56,12 +70,38 @@ configs:
   traefik_services:
     file: ./files/services.yaml
 
-secrets:
-  cloudflare_api_token:
-    file: ./.env.secret
-
+{#
+  Always define the traefik network, but set it up according to external flag,
+  swarm mode, or bridge mode.
+#}
 networks:
-  {{ network_name }}:
+  {{ traefik_network }}:
+    {% if traefik_network_external %}
+    external: true
+    {% else %}
+    {% if swarm_enabled %}
     driver: overlay
     attachable: true
-    name: {{ network_name }}
+    {% else %}
+    driver: bridge
+    {% endif %}
+    name: {{ traefik_network }}
+    {% endif %}
+
+{#
+  Define volumes for certs based on volume_mode.
+  mount mode uses a bind mount inline above; local/nfs need a named volume definition.
+#}
+{% if volume_mode == 'local' %}
+volumes:
+  {{ service_name }}_certs:
+    driver: local
+{% elif volume_mode == 'nfs' %}
+volumes:
+  {{ service_name }}_certs:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr={{ volume_nfs_server }},nfsvers=4,{{ volume_nfs_options }}
+      device: ":{{ volume_nfs_path }}"
+{% endif %}

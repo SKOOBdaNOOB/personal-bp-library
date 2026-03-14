@@ -10,7 +10,11 @@ services:
       - HBOX_LOG_FORMAT={{ log_format }}
       - HBOX_WEB_MAX_UPLOAD_SIZE={{ max_upload_size }}
     volumes:
-      - ./data:/data/
+      {% if volume_mode == 'mount' %}
+      - {{ volume_mount_path }}:/data/
+      {% else %}
+      - {{ service_name }}_data:/data/
+      {% endif %}
 {% if traefik_enabled %}
     networks:
       - {{ traefik_network }}
@@ -24,6 +28,20 @@ services:
 {% else %}
     ports:
       - "{{ port_http }}:7745"
+{% endif %}
+
+{% if volume_mode == 'local' %}
+volumes:
+  {{ service_name }}_data:
+    driver: local
+{% elif volume_mode == 'nfs' %}
+volumes:
+  {{ service_name }}_data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr={{ volume_nfs_server }},nfsvers=4,{{ volume_nfs_options }}
+      device: ":{{ volume_nfs_path }}"
 {% endif %}
 
 {% if traefik_enabled %}

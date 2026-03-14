@@ -42,7 +42,11 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: {{ pg_db }}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
     volumes:
-      - ./media:/media
+      {% if volume_mode == 'mount' %}
+      - {{ volume_mount_path }}:/media
+      {% else %}
+      - {{ service_name }}_media:/media
+      {% endif %}
       - ./custom-templates:/templates
     depends_on:
       {{ service_name }}-postgresql:
@@ -79,7 +83,11 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./media:/media
+      {% if volume_mode == 'mount' %}
+      - {{ volume_mount_path }}:/media
+      {% else %}
+      - {{ service_name }}_media:/media
+      {% endif %}
       - ./certs:/certs
       - ./custom-templates:/templates
     depends_on:
@@ -97,6 +105,17 @@ volumes:
     driver: local
   {{ service_name }}-redis:
     driver: local
+{% if volume_mode == 'local' %}
+  {{ service_name }}_media:
+    driver: local
+{% elif volume_mode == 'nfs' %}
+  {{ service_name }}_media:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr={{ volume_nfs_server }},nfsvers=4,{{ volume_nfs_options }}
+      device: ":{{ volume_nfs_path }}"
+{% endif %}
 
 {% if traefik_enabled %}
 networks:

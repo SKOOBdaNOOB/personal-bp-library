@@ -56,10 +56,17 @@ tls:
         - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
 
 providers:
+{% if swarm_enabled %}
   swarm:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-    network: {{ proxy_network }}
+    network: {{ traefik_network }}
+{% else %}
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: {{ traefik_network }}
+{% endif %}
   file:
     directory: /etc/traefik/files
     watch: true

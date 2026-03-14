@@ -31,5 +31,32 @@ services:
       - "80:80/tcp"
       - "443:443/tcp"
     volumes:
-      - {{ cache_root }}/cache:/data/cache
-      - {{ cache_root }}/logs:/data/logs
+      {% if volume_mode == 'mount' %}
+      - {{ volume_mount_path }}/cache:/data/cache
+      - {{ volume_mount_path }}/logs:/data/logs
+      {% else %}
+      - lancache_data:/data/cache
+      - lancache_logs:/data/logs
+      {% endif %}
+
+{% if volume_mode == 'local' %}
+volumes:
+  lancache_data:
+    driver: local
+  lancache_logs:
+    driver: local
+{% elif volume_mode == 'nfs' %}
+volumes:
+  lancache_data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr={{ volume_nfs_server }},nfsvers=4,{{ volume_nfs_options }}
+      device: ":{{ volume_nfs_path }}/cache"
+  lancache_logs:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr={{ volume_nfs_server }},nfsvers=4,{{ volume_nfs_options }}
+      device: ":{{ volume_nfs_path }}/logs"
+{% endif %}

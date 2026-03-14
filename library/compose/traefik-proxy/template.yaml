@@ -4,7 +4,7 @@ schema: "1.2"
 metadata:
   name: traefik-proxy
   description: |
-    Traefik v3 reverse proxy running in Docker Swarm mode with Cloudflare DNS challenge for TLS.
+    Traefik v3 reverse proxy for Docker and Docker Swarm with Cloudflare DNS challenge for TLS.
     [Documentation](https://doc.traefik.io/traefik/) · [Repository](https://github.com/traefik/traefik)
   author: "Stephen Delisser"
   date: "2026-03-13"
@@ -19,6 +19,17 @@ spec:
   general:
     title: General
     vars:
+      service_name:
+        type: str
+        description: "Container / stack name"
+        default: traefik
+        required: false
+      restart_policy:
+        type: enum
+        description: "Docker restart policy (used in plain Compose mode)"
+        default: unless-stopped
+        options: [always, unless-stopped, on-failure, "no"]
+        required: false
       timezone:
         type: str
         description: "Timezone for the container (tz database format)"
@@ -53,49 +64,113 @@ spec:
 
   authentik:
     title: Authentik
+    toggle: authentik_enabled
     vars:
+      authentik_enabled:
+        type: bool
+        description: "Enable Authentik forward auth middleware"
+        default: false
+        required: false
       authentik_host:
         type: hostname
-        description: "Hostname or IP of the Authentik outpost (used for forward auth middleware)"
+        description: "Hostname or IP of the Authentik outpost"
         default: ""
         required: true
+        needs:
+          - authentik_enabled=true
       authentik_port:
         type: int
         description: "Port of the Authentik outpost"
         default: 9000
         required: false
+        needs:
+          - authentik_enabled=true
 
   swarm:
     title: Docker Swarm
+    toggle: swarm_enabled
     vars:
-      swarm_host:
-        type: str
-        description: "Swarm node hostname to pin the traefik replica to"
-        default: docker-01-prod
+      swarm_enabled:
+        type: bool
+        description: "Enable Docker Swarm mode"
+        default: false
         required: false
+      swarm_placement_mode:
+        type: enum
+        description: "Swarm service placement mode"
+        options: [replicated, global]
+        default: replicated
+        required: true
+        needs:
+          - swarm_enabled=true
+      swarm_replicas:
+        type: int
+        description: "Number of Swarm replicas"
+        default: 1
+        required: true
+        needs:
+          - swarm_enabled=true
+          - swarm_placement_mode=replicated
+      swarm_placement_host:
+        type: str
+        description: "Target hostname for placement constraint"
+        default: ""
+        required: false
+        needs:
+          - swarm_enabled=true
+          - swarm_placement_mode=replicated
 
   network:
     title: Network
     vars:
-      network_name:
+      traefik_network:
         type: str
-        description: "Name of the overlay network traefik manages (must match all service labels)"
+        description: "Docker network Traefik uses to connect to services"
         default: proxy
         required: false
-      proxy_network:
-        type: str
-        description: "Swarm network name in traefik.yaml providers config (should match network_name)"
-        default: proxy
+      traefik_network_external:
+        type: bool
+        description: "Use an existing external Docker network"
+        default: false
         required: false
 
-  volumes:
-    title: Volumes
+  volume:
+    title: Volume
     vars:
-      cert_volume_path:
+      volume_mode:
+        type: enum
+        description: "Certificate storage volume mode"
+        options: [local, mount, nfs]
+        default: local
+        required: true
+      volume_mount_path:
         type: str
-        description: "Host path for the TLS certificate storage volume (NFS or local)"
-        default: /mnt/nfs/swarm/traefik_certs
-        required: false
+        description: "Host path for bind mount"
+        default: /mnt/storage
+        required: true
+        needs:
+          - volume_mode=mount
+      volume_nfs_server:
+        type: str
+        description: "NFS server address"
+        default: 192.168.1.1
+        required: true
+        needs:
+          - volume_mode=nfs
+      volume_nfs_path:
+        type: str
+        description: "NFS export path"
+        default: /export
+        required: true
+        needs:
+          - volume_mode=nfs
+      volume_nfs_options:
+        type: str
+        description: "NFS mount options"
+        default: rw,nolock,soft
+        required: true
+        needs:
+          - volume_mode=nfs
 
   ports:
     title: Ports

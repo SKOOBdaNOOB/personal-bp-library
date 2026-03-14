@@ -80,6 +80,44 @@ spec:
         needs:
           - traefik_tls_enabled=true
 
+  volume:
+    title: Volume
+    vars:
+      volume_mode:
+        type: enum
+        description: "Data volume mode"
+        options: [local, mount, nfs]
+        default: local
+        required: true
+      volume_mount_path:
+        type: str
+        description: "Host path for bind mount"
+        default: /mnt/storage
+        required: true
+        needs:
+          - volume_mode=mount
+      volume_nfs_server:
+        type: str
+        description: "NFS server address"
+        default: 192.168.1.1
+        required: true
+        needs:
+          - volume_mode=nfs
+      volume_nfs_path:
+        type: str
+        description: "NFS export path"
+        default: /export
+        required: true
+        needs:
+          - volume_mode=nfs
+      volume_nfs_options:
+        type: str
+        description: "NFS mount options"
+        default: rw,nolock,soft
+        required: true
+        needs:
+          - volume_mode=nfs
+
   ports:
     title: Ports
     vars:

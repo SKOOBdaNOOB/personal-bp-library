@@ -4,7 +4,6 @@
 
 http:
   middlewares:
-# Production-Ready Security Headers Middleware
     # Use in service labels: traefik.http.routers.myservice.middlewares=security-headers@file
     security-headers:
       headers:
@@ -16,8 +15,7 @@ http:
         stsSeconds: 31536000
         stsIncludeSubdomains: true
         stsPreload: true
-
-# Authentik Forward Auth Middleware
+{% if authentik_enabled %}
     # Use in service labels: traefik.http.routers.myservice.middlewares=authentik@file
     authentik:
       forwardAuth:
@@ -35,3 +33,4 @@ http:
           - X-authentik-meta-provider
           - X-authentik-meta-app
           - X-authentik-meta-version
+{% endif %}

@@ -33,8 +33,13 @@ services:
       broker:
         condition: service_started
     volumes:
+      {% if volume_mode == 'mount' %}
+      - {{ volume_mount_path }}/data:/usr/src/paperless/data
+      - {{ volume_mount_path }}/media:/usr/src/paperless/media
+      {% else %}
       - paperless-data:/usr/src/paperless/data
       - paperless-media:/usr/src/paperless/media
+      {% endif %}
       - ./export:/usr/src/paperless/export
       - ./consume:/usr/src/paperless/consume
     environment:
@@ -63,15 +68,31 @@ services:
       - "{{ port_http }}:8000"
 {% endif %}
 
+{# Infrastructure volumes are always local named volumes #}
 volumes:
-  paperless-data:
-    driver: local
-  paperless-media:
-    driver: local
   paperless-pgdata:
     driver: local
   paperless-redisdata:
     driver: local
+{% if volume_mode == 'local' %}
+  paperless-data:
+    driver: local
+  paperless-media:
+    driver: local
+{% elif volume_mode == 'nfs' %}
+  paperless-data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr={{ volume_nfs_server }},nfsvers=4,{{ volume_nfs_options }}
+      device: ":{{ volume_nfs_path }}/data"
+  paperless-media:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr={{ volume_nfs_server }},nfsvers=4,{{ volume_nfs_options }}
+      device: ":{{ volume_nfs_path }}/media"
+{% endif %}
 
 {% if traefik_enabled %}
 networks:

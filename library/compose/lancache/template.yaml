@@ -50,14 +50,47 @@ spec:
         default: 1.1.1.1
         required: false
 
+  volume:
+    title: Volume
+    vars:
+      volume_mode:
+        type: enum
+        description: "Cache storage volume mode"
+        options: [local, mount, nfs]
+        default: mount
+        required: true
+      volume_mount_path:
+        type: str
+        description: "Host path for bind mount (recommended for large caches)"
+        default: /mnt/lancache
+        required: true
+        needs:
+          - volume_mode=mount
+      volume_nfs_server:
+        type: str
+        description: "NFS server address"
+        default: 192.168.1.1
+        required: true
+        needs:
+          - volume_mode=nfs
+      volume_nfs_path:
+        type: str
+        description: "NFS export path"
+        default: /export
+        required: true
+        needs:
+          - volume_mode=nfs
+      volume_nfs_options:
+        type: str
+        description: "NFS mount options"
+        default: rw,nolock,soft
+        required: true
+        needs:
+          - volume_mode=nfs
+
   cache:
     title: Cache
     vars:
-      cache_root:
-        type: str
-        description: "Host path for storing cached data and logs"
-        default: /mnt/lancache
-        required: false
       cache_disk_size:
         type: str
         description: "Maximum disk cache size (e.g. 4000g, 1t)"
