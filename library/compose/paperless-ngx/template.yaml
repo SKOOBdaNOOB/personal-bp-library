@@ -1,100 +1,135 @@
-version: 1.2
-service:
+kind: compose
+schema: "1.2"
+
+metadata:
   name: paperless-ngx
-  description: "Self-hosted document management system with OCR, tagging, and full-text search"
+  description: |
+    Self-hosted document management system with OCR, tagging, and full-text search.
+    [Documentation](https://docs.paperless-ngx.com/) · [Repository](https://github.com/paperless-ngx/paperless-ngx)
   author: "Stephen Delisser"
-  date: 2026-03-13
+  date: "2026-03-13"
+  version: "latest"
   tags: [documents, ocr, selfhosted, archive]
-  icon: selfhosted
-  links:
-    documentation: "https://docs.paperless-ngx.com/"
-    repository: "https://github.com/paperless-ngx/paperless-ngx"
+  icon:
+    provider: selfh
+    id: paperless-ngx
+  draft: true
 
-specification:
-  - General:
-      - restart_policy:
-          type: enum
-          description: "Docker restart policy"
-          default: unless-stopped
-          options: [always, unless-stopped, on-failure, "no"]
-          required: false
+spec:
+  general:
+    title: General
+    vars:
+      restart_policy:
+        type: enum
+        description: "Docker restart policy"
+        default: unless-stopped
+        options: [always, unless-stopped, on-failure, "no"]
+        required: false
 
-  - Database:
-      - pg_db:
-          type: string
-          description: "PostgreSQL database name"
-          default: paperless
-          required: false
-      - pg_user:
-          type: string
-          description: "PostgreSQL username"
-          default: paperless
-          required: false
-      - pg_pass:
-          type: string
-          description: "PostgreSQL password"
-          default: ""
-          required: true
-          sensitive: true
+  database:
+    title: Database
+    vars:
+      pg_db:
+        type: str
+        description: "PostgreSQL database name"
+        default: paperless
+        required: false
+      pg_user:
+        type: str
+        description: "PostgreSQL username"
+        default: paperless
+        required: false
+      pg_pass:
+        type: str
+        description: "PostgreSQL password"
+        default: ""
+        required: true
+        sensitive: true
 
-  - Paperless:
-      - secret_key:
-          type: string
-          description: "Django secret key for cryptographic signing (generate a random 50-char string)"
-          default: ""
-          required: true
-          sensitive: true
-      - admin_user:
-          type: string
-          description: "Initial admin username"
-          default: admin
-          required: false
-      - admin_mail:
-          type: string
-          description: "Initial admin email address"
-          default: admin@example.com
-          required: false
-      - ocr_language:
-          type: string
-          description: "Primary OCR language (ISO 639-2 code, e.g. eng, fra, deu)"
-          default: eng
-          required: false
-      - time_zone:
-          type: string
-          description: "Timezone for the application (tz database format)"
-          default: America/New_York
-          required: false
+  paperless:
+    title: Paperless
+    vars:
+      secret_key:
+        type: str
+        description: "Django secret key for cryptographic signing (generate a random 50-char string)"
+        default: ""
+        required: true
+        sensitive: true
+      admin_user:
+        type: str
+        description: "Initial admin username"
+        default: admin
+        required: false
+      admin_mail:
+        type: str
+        description: "Initial admin email address"
+        default: admin@example.com
+        required: false
+      ocr_language:
+        type: str
+        description: "Primary OCR language (ISO 639-2 code, e.g. eng, fra, deu)"
+        default: eng
+        required: false
+      time_zone:
+        type: str
+        description: "Timezone for the application (tz database format)"
+        default: America/New_York
+        required: false
 
-  - Traefik:
-      - traefik_enabled:
-          type: bool
-          description: "Enable Traefik reverse proxy integration"
-          default: true
-          required: false
-      - traefik_host:
-          type: string
-          description: "Subdomain for Traefik routing (e.g. paperless)"
-          default: paperless
-          required: false
-      - traefik_domain:
-          type: string
-          description: "Base domain for Traefik routing (e.g. home.example.com)"
-          default: home.example.com
-          required: false
-      - traefik_network:
-          type: string
-          description: "External Traefik network name"
-          default: proxy
-          required: false
-      - cert_resolver:
-          type: string
-          description: "Traefik certificate resolver name"
-          default: cloudflare
-          required: false
+  traefik:
+    title: Traefik
+    toggle: traefik_enabled
+    vars:
+      traefik_enabled:
+        type: bool
+        description: "Enable Traefik reverse proxy integration"
+        default: true
+        required: false
+      traefik_host:
+        type: str
+        description: "Subdomain for Traefik routing (e.g. paperless)"
+        default: paperless
+        required: false
+        needs:
+          - traefik_enabled=true
+      traefik_domain:
+        type: str
+        description: "Base domain for Traefik routing (e.g. home.example.com)"
+        default: home.example.com
+        required: false
+        needs:
+          - traefik_enabled=true
+      traefik_network:
+        type: str
+        description: "External Traefik network name"
+        default: proxy
+        required: false
+        needs:
+          - traefik_enabled=true
 
-  - Ports:
-      - port_http:
-          type: int
-          description: "HTTP port (used when Traefik is disabled)"
-          default: 8000
-          required: false
+  traefik_tls:
+    title: Traefik TLS
+    toggle: traefik_tls_enabled
+    needs: traefik
+    vars:
+      traefik_tls_enabled:
+        type: bool
+        description: "Enable TLS via certificate resolver"
+        default: false
+        required: false
+      cert_resolver:
+        type: str
+        description: "Traefik certificate resolver name"
+        default: cloudflare
+        required: false
+        needs:
+          - traefik_tls_enabled=true
+
+  ports:
+    title: Ports
+    vars:
+      port_http:
+        type: int
+        description: "HTTP port (used when Traefik is disabled)"
+        default: 8000
+        required: false

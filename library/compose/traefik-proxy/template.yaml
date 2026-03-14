@@ -1,93 +1,112 @@
-version: 1.2
-service:
+kind: compose
+schema: "1.2"
+
+metadata:
   name: traefik-proxy
-  description: "Traefik v3 reverse proxy running in Docker Swarm mode with Cloudflare DNS challenge for TLS"
+  description: |
+    Traefik v3 reverse proxy running in Docker Swarm mode with Cloudflare DNS challenge for TLS.
+    [Documentation](https://doc.traefik.io/traefik/) · [Repository](https://github.com/traefik/traefik)
   author: "Stephen Delisser"
-  date: 2026-03-13
+  date: "2026-03-13"
+  version: "latest"
   tags: [traefik, proxy, swarm, tls, cloudflare, network]
-  icon: selfhosted
-  links:
-    documentation: "https://doc.traefik.io/traefik/"
-    repository: "https://github.com/traefik/traefik"
+  icon:
+    provider: selfh
+    id: traefik-proxy
+  draft: true
 
-specification:
-  - General:
-      - timezone:
-          type: string
-          description: "Timezone for the container (tz database format)"
-          default: America/New_York
-          required: false
-      - log_level:
-          type: enum
-          description: "Traefik log level"
-          default: INFO
-          options: [DEBUG, INFO, WARN, ERROR]
-          required: false
+spec:
+  general:
+    title: General
+    vars:
+      timezone:
+        type: str
+        description: "Timezone for the container (tz database format)"
+        default: America/New_York
+        required: false
+      log_level:
+        type: enum
+        description: "Traefik log level"
+        default: INFO
+        options: [DEBUG, INFO, WARN, ERROR]
+        required: false
 
-  - Cloudflare:
-      - cf_api_token:
-          type: string
-          description: "Cloudflare API token with DNS:Edit permissions (used for ACME DNS challenge)"
-          default: ""
-          required: true
-          sensitive: true
-      - acme_email:
-          type: email
-          description: "Email address for Let's Encrypt ACME registration"
-          default: admin@example.com
-          required: true
-      - cert_resolver:
-          type: string
-          description: "Certificate resolver name used in Traefik config and service labels"
-          default: cloudflare
-          required: false
+  cloudflare:
+    title: Cloudflare
+    vars:
+      cf_api_token:
+        type: str
+        description: "Cloudflare API token with DNS:Edit permissions (used for ACME DNS challenge)"
+        default: ""
+        required: true
+        sensitive: true
+      acme_email:
+        type: email
+        description: "Email address for Let's Encrypt ACME registration"
+        default: admin@example.com
+        required: true
+      cert_resolver:
+        type: str
+        description: "Certificate resolver name used in Traefik config and service labels"
+        default: cloudflare
+        required: false
 
-  - Authentik:
-      - authentik_host:
-          type: hostname
-          description: "Hostname or IP of the Authentik outpost (used for forward auth middleware)"
-          default: ""
-          required: true
-      - authentik_port:
-          type: int
-          description: "Port of the Authentik outpost"
-          default: 9000
-          required: false
+  authentik:
+    title: Authentik
+    vars:
+      authentik_host:
+        type: hostname
+        description: "Hostname or IP of the Authentik outpost (used for forward auth middleware)"
+        default: ""
+        required: true
+      authentik_port:
+        type: int
+        description: "Port of the Authentik outpost"
+        default: 9000
+        required: false
 
-  - Swarm:
-      - swarm_host:
-          type: string
-          description: "Swarm node hostname to pin the traefik replica to"
-          default: docker-01-prod
-          required: false
+  swarm:
+    title: Docker Swarm
+    vars:
+      swarm_host:
+        type: str
+        description: "Swarm node hostname to pin the traefik replica to"
+        default: docker-01-prod
+        required: false
 
-  - Network:
-      - network_name:
-          type: string
-          description: "Name of the overlay network traefik manages (must match all service labels)"
-          default: proxy
-          required: false
-      - proxy_network:
-          type: string
-          description: "Swarm network name in traefik.yaml providers config (should match network_name)"
-          default: proxy
-          required: false
+  network:
+    title: Network
+    vars:
+      network_name:
+        type: str
+        description: "Name of the overlay network traefik manages (must match all service labels)"
+        default: proxy
+        required: false
+      proxy_network:
+        type: str
+        description: "Swarm network name in traefik.yaml providers config (should match network_name)"
+        default: proxy
+        required: false
 
-  - Volumes:
-      - cert_volume_path:
-          type: string
-          description: "Host path for the TLS certificate storage volume (NFS or local)"
-          default: /mnt/nfs/swarm/traefik_certs
-          required: false
+  volumes:
+    title: Volumes
+    vars:
+      cert_volume_path:
+        type: str
+        description: "Host path for the TLS certificate storage volume (NFS or local)"
+        default: /mnt/nfs/swarm/traefik_certs
+        required: false
 
-  - Ports:
-      - port_http:
-          type: int
-          description: "HTTP entrypoint port"
-          default: 80
-          required: false
-      - port_https:
-          type: int
-          description: "HTTPS entrypoint port"
-          default: 443
-          required: false
+  ports:
+    title: Ports
+    vars:
+      port_http:
+        type: int
+        description: "HTTP entrypoint port"
+        default: 80
+        required: false
+      port_https:
+        type: int
+        description: "HTTPS entrypoint port"
+        default: 443
+        required: false

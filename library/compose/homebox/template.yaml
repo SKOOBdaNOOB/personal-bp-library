@@ -1,78 +1,111 @@
-version: 1.2
-service:
+kind: compose
+schema: "1.2"
+
+metadata:
   name: homebox
-  description: "Self-hosted home inventory and organization system"
+  description: |
+    Self-hosted home inventory and organization system.
+    [Documentation](https://hay-kot.github.io/homebox/) · [Repository](https://github.com/hay-kot/homebox)
   author: "Stephen Delisser"
-  date: 2026-03-13
+  date: "2026-03-13"
+  version: "latest"
   tags: [inventory, home, selfhosted]
-  icon: selfhosted
-  links:
-    documentation: "https://hay-kot.github.io/homebox/"
-    repository: "https://github.com/hay-kot/homebox"
+  icon:
+    provider: selfh
+    id: homebox
+  draft: true
 
-specification:
-  - General:
-      - service_name:
-          type: string
-          description: "Container name"
-          default: homebox
-          required: false
-      - restart_policy:
-          type: enum
-          description: "Docker restart policy"
-          default: always
-          options: [always, unless-stopped, on-failure, "no"]
-          required: false
+spec:
+  general:
+    title: General
+    vars:
+      service_name:
+        type: str
+        description: "Container name"
+        default: homebox
+        required: false
+      restart_policy:
+        type: enum
+        description: "Docker restart policy"
+        default: always
+        options: [always, unless-stopped, on-failure, "no"]
+        required: false
 
-  - Configuration:
-      - log_level:
-          type: enum
-          description: "Application log level"
-          default: info
-          options: [debug, info, warn, error]
-          required: false
-      - log_format:
-          type: enum
-          description: "Application log format"
-          default: text
-          options: [text, json]
-          required: false
-      - max_upload_size:
-          type: int
-          description: "Maximum file upload size in MB"
-          default: 10
-          required: false
+  configuration:
+    title: Configuration
+    vars:
+      log_level:
+        type: enum
+        description: "Application log level"
+        default: info
+        options: [debug, info, warn, error]
+        required: false
+      log_format:
+        type: enum
+        description: "Application log format"
+        default: text
+        options: [text, json]
+        required: false
+      max_upload_size:
+        type: int
+        description: "Maximum file upload size in MB"
+        default: 10
+        required: false
 
-  - Traefik:
-      - traefik_enabled:
-          type: bool
-          description: "Enable Traefik reverse proxy integration"
-          default: true
-          required: false
-      - traefik_host:
-          type: string
-          description: "Subdomain for Traefik routing (e.g. things)"
-          default: things
-          required: false
-      - traefik_domain:
-          type: string
-          description: "Base domain for Traefik routing (e.g. home.example.com)"
-          default: home.example.com
-          required: false
-      - traefik_network:
-          type: string
-          description: "External Traefik network name"
-          default: proxy
-          required: false
-      - cert_resolver:
-          type: string
-          description: "Traefik certificate resolver name"
-          default: cloudflare
-          required: false
+  traefik:
+    title: Traefik
+    toggle: traefik_enabled
+    vars:
+      traefik_enabled:
+        type: bool
+        description: "Enable Traefik reverse proxy integration"
+        default: true
+        required: false
+      traefik_host:
+        type: str
+        description: "Subdomain for Traefik routing (e.g. things)"
+        default: things
+        required: false
+        needs:
+          - traefik_enabled=true
+      traefik_domain:
+        type: str
+        description: "Base domain for Traefik routing (e.g. home.example.com)"
+        default: home.example.com
+        required: false
+        needs:
+          - traefik_enabled=true
+      traefik_network:
+        type: str
+        description: "External Traefik network name"
+        default: proxy
+        required: false
+        needs:
+          - traefik_enabled=true
 
-  - Ports:
-      - port_http:
-          type: int
-          description: "HTTP port (used when Traefik is disabled)"
-          default: 7745
-          required: false
+  traefik_tls:
+    title: Traefik TLS
+    toggle: traefik_tls_enabled
+    needs: traefik
+    vars:
+      traefik_tls_enabled:
+        type: bool
+        description: "Enable TLS via certificate resolver"
+        default: false
+        required: false
+      cert_resolver:
+        type: str
+        description: "Traefik certificate resolver name"
+        default: cloudflare
+        required: false
+        needs:
+          - traefik_tls_enabled=true
+
+  ports:
+    title: Ports
+    vars:
+      port_http:
+        type: int
+        description: "HTTP port (used when Traefik is disabled)"
+        default: 7745
+        required: false
